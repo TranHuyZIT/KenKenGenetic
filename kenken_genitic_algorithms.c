@@ -216,6 +216,12 @@ int findX(List L, int X)
     }
     return -1;
 }
+void print_list(List l) {
+    for (int i =0 ; i<l.size; i++) {
+        printf("%d ",l.E[i]);
+    }
+    printf("\n");
+}
 // Tìm vị trí phần tử giống nhau đầu tiên của 2 danh sách
 int findSameElement(List L, List Remaining)
 {
@@ -483,7 +489,7 @@ int KKBackTracking(KenKen *KK, KenKen *Backup)
 int int_rand(int from, int to)
 {
     int i;
-    int num = (rand() % (from - to + 1)) + from;
+    int num = (rand() % (to - from+1 )) + from;
     return num;
 }
 
@@ -569,7 +575,20 @@ void appendPopulation(Population *P, Individual ind)
 {
     P->Inds[P->size++] = ind;
 }
-
+void print_indivial(Individual i) {
+    printf("\n");
+    for (int a=0; a<NumDigits; a++) {
+        for (int b=0; b<NumDigits; b++) {
+            printf("%d ", i.Chromosome[a][b]); 
+        }
+        printf("\n");
+    }
+}
+void print_population(Population p) {
+    for (int i = 0; i<p.size; i++) {
+        print_indivial(p.Inds[i]);
+    }
+}
 List avalableValuesInd(int row, int col, Individual ind, KenKen KK)
 {
     int values[NumDigits + 1];
@@ -697,8 +716,8 @@ void seedPopulation(Population *P, int indNum, KenKen KK)
                         break;
                     }
                     else
-                    {
-                        int randomIndex = int_rand(0, availables.size - 1);
+                    {   
+                        int randomIndex = int_rand(0, availables.size-1 );
                         ind.Chromosome[i][j] = availables.E[randomIndex];
                     }
                 }
@@ -711,11 +730,11 @@ void seedPopulation(Population *P, int indNum, KenKen KK)
         }
         if (isValid == 1)
         {
-            updateFitness(&ind, KK);
+            // updateFitness(&ind, KK);
             appendPopulation(P, ind);
         }
     }
-    sortPopulation(P);
+    // sortPopulation(P);
 }
 
 Individual compete(Population P, double selectionRate)
@@ -739,23 +758,43 @@ Individual compete(Population P, double selectionRate)
     return worseInd;
 }
 Population crossover(Individual Parent1, Individual Parent2, double crossoverRate,KenKen KK) {
+    Population pop; 
+    initPopulation(&pop); 
     Individual chidren1 = Parent1;
     Individual chidren2 = Parent2;
     double r = float_rand(0, 1.0); 
+            printf("%.2f ",r);
+
     if (r < crossoverRate) {
-        int gen[NumDigits];
-        for 
-        chidren1 = 
+        int soluong = int_rand(1, NumDigits-1);
+            printf("%d ",soluong);
+        for (int k=0; k<soluong; k++) {
+            int row = int_rand(0, NumDigits-1); 
+            for (int i = 0; i<NumDigits; i++) {
+                int t = chidren1.Chromosome[row][i];
+                chidren1.Chromosome[row][i] = chidren2.Chromosome[row][i];
+                chidren2.Chromosome[row][i] = t;
+            }
+        }
     }
+    appendPopulation(&pop, chidren1);
+    appendPopulation(&pop, chidren2);
+    return pop;
 }
+
 int main()
 {
     srand(time(0));
     KenKen KK;
-    readKenKen(&KK, "inputs/input1.txt");
+    readKenKen(&KK, "input3x3.txt");
     KenKen Backup;
     // printKenKen(KK);
-    solve_KenKen_with_constraints(&KK, &Backup);
-    printKenKen(KK);
+    //solve_KenKen_with_constraints(&KK, &Backup);
+    Population pop;
+    initPopulation(&pop);
+    seedPopulation(&pop, 2, KK); 
+    print_population(pop);
+    pop = crossover(pop.Inds[0],pop.Inds[1],0.85,KK);
+    print_population(pop);
     return 0;
 }
