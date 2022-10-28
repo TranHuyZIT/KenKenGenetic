@@ -575,7 +575,7 @@ void appendPopulation(Population *P, Individual ind)
 {
     P->Inds[P->size++] = ind;
 }
-void print_indivial(Individual i) {
+void print_individual(Individual i) {
     printf("\n");
     for (int a=0; a<NumDigits; a++) {
         for (int b=0; b<NumDigits; b++) {
@@ -586,7 +586,7 @@ void print_indivial(Individual i) {
 }
 void print_population(Population p) {
     for (int i = 0; i<p.size; i++) {
-        print_indivial(p.Inds[i]);
+        print_individual(p.Inds[i]);
     }
 }
 List avalableValuesInd(int row, int col, Individual ind, KenKen KK)
@@ -634,65 +634,76 @@ void sortPopulation(Population *P)
 
 void updateFitness(Individual *ind, KenKen KK)
 {
+    // Bu?c 1: T�nh BoxF.
     int i, j;
-    double boxF = 0, colF = 0;
+    double boxsum = 0.0;
+
     for (i = 0; i < KK.ListBoxes.size; i++)
     {
-        char op = KK.ListBoxes.B[i].op;
+        char Operator = KK.ListBoxes.B[i].op;
         int Con_Value = KK.ListBoxes.B[i].value;
-        int S;
-        if (op == 'x' || op == '/')
+        int S = 0;
+        if (Operator == 'x' || Operator == '/')
             S = 1;
-        if (op == '-' || op == '+' || op == '=')
+        if (Operator == '-' || Operator == '+' || Operator == '=')
             S = 0;
         int j;
         for (j = 0; j < KK.ListBoxes.B[i].size; j++)
         {
             Coord C = KK.ListBoxes.B[i].coord[j];
-            if (op == 'x')
+            if (Operator == 'x')
                 S *= ind->Chromosome[C.x][C.y];
-            if (op == '/')
+            if (Operator == '/')
                 S = max(S, ind->Chromosome[C.x][C.y]) / min(S, ind->Chromosome[C.x][C.y]);
-            if (op == '=')
+            if (Operator == '=')
                 S = ind->Chromosome[C.x][C.y];
-            if (op == '+')
+            if (Operator == '+')
                 S += ind->Chromosome[C.x][C.y];
-            if (op == '-')
+            if (Operator == '-')
                 S = abs(S - ind->Chromosome[C.x][C.y]);
         }
         if (S == Con_Value)
-            boxF += 1.0;
+            boxsum = boxsum + 1.0;
     }
-    boxF /= KK.ListBoxes.size;
-
-    int numberCount[NumDigits + 1];
-    for (i = 0; i <= NumDigits; i++)
-        numberCount[i] = 0;
+    boxsum = boxsum / KK.ListBoxes.size;
+    // Bu?c 2: T�nh ColF.
+    int columncount[NumDigits]; // Luu t?n s? xu?t hi?n c?a m?t con s? i ? ch? s? (i-1).
+    for (i = 0; i < NumDigits; i++)
+        columncount[i] = 0;
+    double columnsum = 0.0;
     for (i = 0; i < NumDigits; i++)
     {
+        // C?p nh?t t?n s? xu?t hi?n c?a m?t con s?.
         for (j = 0; j < NumDigits; j++)
         {
-            numberCount[ind->Chromosome[i][j]] += 1;
+            columncount[ind->Chromosome[j][i] - 1] += 1;
         }
+        //�?m s? lu?ng c�c con s? c� t?n s? xu?t hi?n l?n hon 0.
+        int nonzero = 0;
+        for (j = 0; j < NumDigits; j++)
+        {
+            if (columncount[j] != 0)
+                nonzero += 1;
+        }
+        columnsum = columnsum + ((1.0 * nonzero) / (1.0 * NumDigits));
+        for (j = 0; j < NumDigits; j++)
+            columncount[j] = 0;
     }
-    for (i = 1; i <= NumDigits; i++)
-    {
-        if (numberCount[i] == 0)
-            colF += 1.0;
-    }
-    colF /= NumDigits;
-    if ((int)boxF == 1 && ((int)colF == 1))
+    columnsum = columnsum / NumDigits;
+    // Bu?c 3: T�nh Fittness.
+    if (((int)boxsum == 1) && ((int)columnsum) == 1)
     {
         ind->Fitness = 1.0;
     }
     else
     {
-        ind->Fitness = colF * boxF;
+        ind->Fitness = (boxsum) * (columnsum);
     }
 }
 
 void seedPopulation(Population *P, int indNum, KenKen KK)
 {
+    
     initPopulation(P);
     int p;
     for (p = 0; p < indNum; p++)
@@ -730,11 +741,11 @@ void seedPopulation(Population *P, int indNum, KenKen KK)
         }
         if (isValid == 1)
         {
-            // updateFitness(&ind, KK);
+            updateFitness(&ind, KK);
             appendPopulation(P, ind);
         }
     }
-    // sortPopulation(P);
+    sortPopulation(P);
 }
 
 Individual compete(Population P, double selectionRate)
@@ -752,22 +763,36 @@ Individual compete(Population P, double selectionRate)
         betterInd = ind2;
         worseInd = ind1;
     }
-    double ran = float_rand(0.0, 100.0);
+    double ran = float_rand(0.0, 1.0);
     if (ran <= selectionRate)
         return betterInd;
     return worseInd;
 }
+void mutate(double mutationRate, Individual* Ind, KenKen KK){
+    double r = float_rand(0, 1.0); 
+    printf("%.2f ", r);
+    if (r < mutationRate) {
+        for (int i = 0; i<2; i++) {
+            int g = int_rand(0, NumDigits-1);
+            int x = int_rand(0, NumDigits-1); 
+            int y = int_rand(0, NumDigits-1); 
+            printf("- %d %d %d \n", g, x, y);
+            int t = Ind->Chromosome[g][x]; 
+            Ind->Chromosome[g][x] = Ind->Chromosome[g][y]; 
+            Ind->Chromosome[g][y] = t;
+        }
+    }
+}
 Population crossover(Individual Parent1, Individual Parent2, double crossoverRate,KenKen KK) {
-    Population pop; 
+    printf("1");
+	Population pop; 
     initPopulation(&pop); 
     Individual chidren1 = Parent1;
     Individual chidren2 = Parent2;
-    double r = float_rand(0, 1.0); 
-            printf("%.2f ",r);
-
+    double r = float_rand(0, 1.0);
+	printf("%.2f", r);
     if (r < crossoverRate) {
-        int soluong = int_rand(1, NumDigits-1);
-            printf("%d ",soluong);
+        int soluong = int_rand(1, NumDigits);
         for (int k=0; k<soluong; k++) {
             int row = int_rand(0, NumDigits-1); 
             for (int i = 0; i<NumDigits; i++) {
@@ -777,24 +802,110 @@ Population crossover(Individual Parent1, Individual Parent2, double crossoverRat
             }
         }
     }
+    print_individual(chidren1); 
     appendPopulation(&pop, chidren1);
     appendPopulation(&pop, chidren2);
     return pop;
 }
+Individual solve_KenKen(KenKen KK)
+{
+	//Bước 1: Khởi tạo các biến.
+	int Num_Candidates=100; //Số lượng cá thể trong quần thể.
+	int Num_Elites=0.05*Num_Candidates; //Số lượng cá thể ưu tú trong quần thể.
+	int Num_Generations=1000; //Số thế hệ.
+	int Num_Mutations=0; //Số lần đột biến.	
+	double phi=0, sigma=1, mutationRate=0.06; //Hệ số phi và hệ số sigma (để cập nhật tỉ lệ đột biến), tỉ lệ đột biến.	
+	//Bước 2: Khởi tạo quần thể ban đầu.
+	Population P; initPopulation(&P);
+	seedPopulation(&P,Num_Candidates,KK);
+	//Bước 3: Thực hiện quá trình di truyền.
+	int i,stale=0;
+	for (i=0;i<Num_Generations;i++)
+	{
+		//Kiểm tra quần thể hiện tại (kiểm tra xem đã tìm được đáp án chưa).
+		printf("_Generation %d_\n",i);		
+		double best_Fitness=0.0;
+		sortPopulation(&P);
+		if (P.Inds[0].Fitness==1) return P.Inds[0];
+		if (P.Inds[0].Fitness > best_Fitness) best_Fitness=P.Inds[0].Fitness;
+		printf("_Best Fitness: %.3f_\n",best_Fitness);
+		//Khởi tạo một quần thể.		
+		Population Next_P; initPopulation(&Next_P); 	
+		Population Elites; initPopulation(&Elites); //Lấy các cá thể ưu tú để giữ lại cho thế hệ tiếp theo.
+		int k;
+		for (k=0;k<Num_Elites;k++) appendPopulation(&Elites,P.Inds[k]);
+		int count;
+		for (count=Num_Elites;count<Num_Candidates;count+=2) //Thực hiện chọn lọc tự nhiên, lai ghép và đột biến để tạo nên các cá thể mới cho thế hệ tiếp theo.
+		{	
+			//Lấy hai cá thể cha mẹ thông qua chọn lọc tự nhiên.
+			Individual Parent1=compete(P, 1);
+			Individual Parent2=compete(P, 1);			
+			Population Result; initPopulation(&Result);
+	
+			printf("%d\n", Result.size);
+			// Thực hiện lai ghép để tạo ra hai cá thể con mới.
+			Result=crossover(Parent1,Parent2,1.0,KK);
+			
+			//Đột biến con thứ nhất.
+			double old_Fitness=Result.Inds[0].Fitness;
+			mutate(mutationRate,&Result.Inds[0],KK);
+			updateFitness(&Result.Inds[0],KK);
+		
+			Num_Mutations+=1;
+			if (Result.Inds[0].Fitness > old_Fitness) phi=phi+1.0;
+			//Đột biến con thứ hai.			
+			old_Fitness=Result.Inds[1].Fitness;
+			mutate(mutationRate,&Result.Inds[1],KK);
+			updateFitness(&Result.Inds[1],KK);
+			
+            Num_Mutations+=1;
+			if (Result.Inds[1].Fitness > old_Fitness) phi=phi+1.0;
+			
+			appendPopulation(&Next_P,Result.Inds[0]); 
+			appendPopulation(&Next_P,Result.Inds[1]);
+		}
+		//Tạo quần thể cho thế hệ tiếp theo.	
+		for (k=0;k<Elites.size;k++) appendPopulation(&Next_P,Elites.Inds[k]);		
+		P=Next_P;
+		//Cập nhật hàm thích nghi cho mọi cá thể và sắp xếp quần thể mới vừa tạo.
+		for (k=0;k<P.size;k++) updateFitness(&P.Inds[k],KK);
+		sortPopulation(&P);	
+		//Cập nhật tỉ lệ đột biến.
+		if (Num_Mutations==0) phi=0;
+		else phi=phi/(1.0*Num_Mutations);
+		if (phi>0.2) sigma=sigma/0.998;
+		else sigma=sigma*0.998;
+		mutationRate=float_rand(0.0,sigma);		
+		//Kiểm tra quần thể mới vừa tạo (kiểm tra xem có bị bế tắc từ 100 lần trở lên hay không).
+		if (P.Inds[0].Fitness != P.Inds[1].Fitness) stale=0;
+		else stale+=1;
+		if (stale>=10) //Nếu bị bế tắc, khởi tạo lại quần thể từ ban đầu.
+		{
+			printf("Stale Population. Re-seeding...\n");
+			seedPopulation(&P,Num_Candidates,KK);
+			stale=0;
+			sigma=1;
+			phi=0;
+			Num_Mutations=0;
+			mutationRate=0.06;
+		}			
+	}
+}
 
 int main()
 {
-    srand(time(0));
-    KenKen KK;
-    readKenKen(&KK, "input3x3.txt");
-    KenKen Backup;
-    // printKenKen(KK);
-    //solve_KenKen_with_constraints(&KK, &Backup);
-    Population pop;
-    initPopulation(&pop);
-    seedPopulation(&pop, 2, KK); 
-    print_population(pop);
-    pop = crossover(pop.Inds[0],pop.Inds[1],0.85,KK);
-    print_population(pop);
-    return 0;
+	srand(time(0));
+	KenKen KK; readKenKen(&KK,"input5x5.txt");
+	KenKen Backup;
+	// printKenKen(KK);
+	//solve_KenKen_with_constraints(&KK,&Backup);
+	Population p; 
+	initPopulation(&p); 
+	seedPopulation(&p, 2, KK);
+	p = crossover(p.Inds[0], p.Inds[1], 1, KK);
+	printf(" -- ");
+	print_individual(p.Inds[0]);	
+	Individual KQ=solve_KenKen(KK);
+	print_individual(KQ);	
+	return 0;
 }
