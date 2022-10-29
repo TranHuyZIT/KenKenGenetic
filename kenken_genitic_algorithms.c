@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define MAX_INDIVIDUAL 200
+#define MAX_INDIVIDUAL 110
 #define MAX_LENGTH 81
-#define MAX_NUMDIGITS 9
+#define MAX_NUMDIGITS 9 
 int NumDigits = 9;
 
 //Cấu trúc tọa độ
@@ -455,8 +455,8 @@ void printKenKen(KenKen KK)
     }
     printf("\n");
 }
-
-int exploredCounter = 0;
+long long MaxExplored = 0;
+long long exploredCounter = 0;
 int KKBackTracking(KenKen *KK, KenKen *Backup)
 {
     if (isFilledKenKen(*KK))
@@ -472,6 +472,7 @@ int KKBackTracking(KenKen *KK, KenKen *Backup)
     {
         KK->Result[coord.x][coord.y] = L.E[i];
         exploredCounter++;
+        if ( exploredCounter > MaxExplored) return 0;
         int boxIndex = KK->CoordBoxMapping[coord.x][coord.y];
         if (checkValidBox(boxIndex, *KK))
         {
@@ -768,9 +769,11 @@ Individual compete(Population P, double selectionRate)
         return betterInd;
     return worseInd;
 }
+int num_mun = 0;
 void mutate(double mutationRate, Individual* Ind, KenKen KK){
-    double r = float_rand(0, 1.0); 
+	double r = float_rand(0, 1.0); 
     if (r < mutationRate) {
+    	num_mun++;
         for (int i = 0; i<2; i++) {
             int g = int_rand(0, NumDigits-1);
             int x = int_rand(0, NumDigits-1); 
@@ -802,6 +805,7 @@ Population crossover(Individual Parent1, Individual Parent2, double crossoverRat
     appendPopulation(&pop, chidren2);
     return pop;
 }
+Individual best_indi; 
 Individual solve_KenKen(KenKen KK)
 {
 	//Bước 1: Khởi tạo các biến.
@@ -823,6 +827,9 @@ Individual solve_KenKen(KenKen KK)
 		sortPopulation(&P);
 		if (P.Inds[0].Fitness==1) return P.Inds[0];
 		if (P.Inds[0].Fitness > best_Fitness) best_Fitness=P.Inds[0].Fitness;
+		if (best_indi.Fitness < best_Fitness) {
+			best_indi = P.Inds[0];
+		}
 		printf("_Best Fitness: %.3f_\n",best_Fitness);
 		//Khởi tạo một quần thể.		
 		Population Next_P; initPopulation(&Next_P); 	
@@ -833,26 +840,26 @@ Individual solve_KenKen(KenKen KK)
 		for (count=Num_Elites;count<Num_Candidates;count+=2) //Thực hiện chọn lọc tự nhiên, lai ghép và đột biến để tạo nên các cá thể mới cho thế hệ tiếp theo.
 		{	
 			//Lấy hai cá thể cha mẹ thông qua chọn lọc tự nhiên.
-			Individual Parent1=compete(P, 1.0);
-			Individual Parent2=compete(P, 1.0);			
+			Individual Parent1=compete(P, 0.85);
+			Individual Parent2=compete(P, 0.85);			
 			Population Result; initPopulation(&Result);
 	
 			// Thực hiện lai ghép để tạo ra hai cá thể con mới.
-			Result=crossover(Parent1,Parent2,1.0,KK);
+			Result=crossover(Parent1,Parent2,0.9,KK);
 			
 			//Đột biến con thứ nhất.
 			double old_Fitness=Result.Inds[0].Fitness;
-			mutate(mutationRate,&Result.Inds[0],KK);
+			mutate(0.1,&Result.Inds[0],KK);
 			updateFitness(&Result.Inds[0],KK);
 		
 			Num_Mutations+=1;
 			if (Result.Inds[0].Fitness > old_Fitness) phi=phi+1.0;
 			//Đột biến con thứ hai.			
 			old_Fitness=Result.Inds[1].Fitness;
-			mutate(mutationRate,&Result.Inds[1],KK);
+			mutate(0.1,&Result.Inds[1],KK);
 			updateFitness(&Result.Inds[1],KK);
 			
-          Num_Mutations+=1;
+          	Num_Mutations+=1;
 			if (Result.Inds[1].Fitness > old_Fitness) phi=phi+1.0;
 			
 			appendPopulation(&Next_P,Result.Inds[0]); 
@@ -865,15 +872,15 @@ Individual solve_KenKen(KenKen KK)
 		for (k=0;k<P.size;k++) updateFitness(&P.Inds[k],KK);
 		sortPopulation(&P);	
 		//Cập nhật tỉ lệ đột biến.
-		if (Num_Mutations==0) phi=0;
-		else phi=phi/(1.0*Num_Mutations);
-		if (phi>0.2) sigma=sigma/0.998;
-		else sigma=sigma*0.998;
-		mutationRate=float_rand(0.0,sigma);		
+//		if (Num_Mutations==0) phi=0;
+//		else phi=phi/(1.0*Num_Mutations);
+//		if (phi>0.2) sigma=sigma/0.998;
+//		else sigma=sigma*0.998;
+//		mutationRate=float_rand(0.0,sigma);		
 		//Kiểm tra quần thể mới vừa tạo (kiểm tra xem có bị bế tắc từ 100 lần trở lên hay không).
 		if (P.Inds[0].Fitness != P.Inds[1].Fitness) stale=0;
 		else stale+=1;
-		if (stale>=1000) //Nếu bị bế tắc, khởi tạo lại quần thể từ ban đầu.
+		if (stale>=50) //Nếu bị bế tắc, khởi tạo lại quần thể từ ban đầu.
 		{
 			printf("Stale Population. Re-seeding...\n");
 			seedPopulation(&P,Num_Candidates,KK);
@@ -889,11 +896,24 @@ Individual solve_KenKen(KenKen KK)
 
 int main()
 {
-	srand(time(0));
-	KenKen KK; readKenKen(&KK,"input8x8.txt");
+	for (int i=1; i<=NumDigits; i++) {
+		MaxExplored *= 1000;
+	}
+	time_t start, end;
+   	srand(time(0));
+	KenKen KK; readKenKen(&KK,"input9x9.txt");
 	KenKen Backup;
-//	solve_KenKen_with_constraints(&KK,&Backup);
-	Individual KQ=solve_KenKen(KK);
-	print_individual(KQ);	
+	solve_KenKen_with_constraints(&KK,&Backup);
+
+    start = clock();
+	
+	printKenKen(Backup);
+	Individual KQ=solve_KenKen(Backup);
+	print_individual(KQ);
+    end = clock();
+    float duration = (float)(end - start) / CLOCKS_PER_SEC;
+    printf("\nTimes Taken: %.4fsec", duration);
+    print_individual(best_indi);
+    printf("\n %.2f", best_indi.Fitness);
 	return 0;
 }
