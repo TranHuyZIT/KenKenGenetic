@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define MAX_INDIVIDUAL 1050
+#define MAX_INDIVIDUAL 200
 #define MAX_LENGTH 81
 #define MAX_NUMDIGITS 9
 int NumDigits = 9;
@@ -634,7 +634,7 @@ void sortPopulation(Population *P)
 
 void updateFitness(Individual *ind, KenKen KK)
 {
-    // Bu?c 1: T�nh BoxF.
+    // Bu?c 1: T�nh BoxF.
     int i, j;
     double boxsum = 0.0;
 
@@ -666,7 +666,7 @@ void updateFitness(Individual *ind, KenKen KK)
             boxsum = boxsum + 1.0;
     }
     boxsum = boxsum / KK.ListBoxes.size;
-    // Bu?c 2: T�nh ColF.
+    // Bu?c 2: T�nh ColF.
     int columncount[NumDigits]; // Luu t?n s? xu?t hi?n c?a m?t con s? i ? ch? s? (i-1).
     for (i = 0; i < NumDigits; i++)
         columncount[i] = 0;
@@ -678,7 +678,7 @@ void updateFitness(Individual *ind, KenKen KK)
         {
             columncount[ind->Chromosome[j][i] - 1] += 1;
         }
-        //�?m s? lu?ng c�c con s? c� t?n s? xu?t hi?n l?n hon 0.
+        //�?m s? lu?ng c�c con s? c� t?n s? xu?t hi?n l?n hon 0.
         int nonzero = 0;
         for (j = 0; j < NumDigits; j++)
         {
@@ -690,7 +690,7 @@ void updateFitness(Individual *ind, KenKen KK)
             columncount[j] = 0;
     }
     columnsum = columnsum / NumDigits;
-    // Bu?c 3: T�nh Fittness.
+    // Bu?c 3: T�nh Fittness.
     if (((int)boxsum == 1) && ((int)columnsum) == 1)
     {
         ind->Fitness = 1.0;
@@ -770,13 +770,11 @@ Individual compete(Population P, double selectionRate)
 }
 void mutate(double mutationRate, Individual* Ind, KenKen KK){
     double r = float_rand(0, 1.0); 
-    printf("%.2f ", r);
     if (r < mutationRate) {
         for (int i = 0; i<2; i++) {
             int g = int_rand(0, NumDigits-1);
             int x = int_rand(0, NumDigits-1); 
             int y = int_rand(0, NumDigits-1); 
-            printf("- %d %d %d \n", g, x, y);
             int t = Ind->Chromosome[g][x]; 
             Ind->Chromosome[g][x] = Ind->Chromosome[g][y]; 
             Ind->Chromosome[g][y] = t;
@@ -784,13 +782,11 @@ void mutate(double mutationRate, Individual* Ind, KenKen KK){
     }
 }
 Population crossover(Individual Parent1, Individual Parent2, double crossoverRate,KenKen KK) {
-    printf("1");
 	Population pop; 
     initPopulation(&pop); 
     Individual chidren1 = Parent1;
     Individual chidren2 = Parent2;
     double r = float_rand(0, 1.0);
-	printf("%.2f", r);
     if (r < crossoverRate) {
         int soluong = int_rand(1, NumDigits);
         for (int k=0; k<soluong; k++) {
@@ -802,7 +798,6 @@ Population crossover(Individual Parent1, Individual Parent2, double crossoverRat
             }
         }
     }
-    print_individual(chidren1); 
     appendPopulation(&pop, chidren1);
     appendPopulation(&pop, chidren2);
     return pop;
@@ -812,7 +807,7 @@ Individual solve_KenKen(KenKen KK)
 	//Bước 1: Khởi tạo các biến.
 	int Num_Candidates=100; //Số lượng cá thể trong quần thể.
 	int Num_Elites=0.05*Num_Candidates; //Số lượng cá thể ưu tú trong quần thể.
-	int Num_Generations=1000; //Số thế hệ.
+	int Num_Generations=10000; //Số thế hệ.
 	int Num_Mutations=0; //Số lần đột biến.	
 	double phi=0, sigma=1, mutationRate=0.06; //Hệ số phi và hệ số sigma (để cập nhật tỉ lệ đột biến), tỉ lệ đột biến.	
 	//Bước 2: Khởi tạo quần thể ban đầu.
@@ -838,11 +833,10 @@ Individual solve_KenKen(KenKen KK)
 		for (count=Num_Elites;count<Num_Candidates;count+=2) //Thực hiện chọn lọc tự nhiên, lai ghép và đột biến để tạo nên các cá thể mới cho thế hệ tiếp theo.
 		{	
 			//Lấy hai cá thể cha mẹ thông qua chọn lọc tự nhiên.
-			Individual Parent1=compete(P, 1);
-			Individual Parent2=compete(P, 1);			
+			Individual Parent1=compete(P, 1.0);
+			Individual Parent2=compete(P, 1.0);			
 			Population Result; initPopulation(&Result);
 	
-			printf("%d\n", Result.size);
 			// Thực hiện lai ghép để tạo ra hai cá thể con mới.
 			Result=crossover(Parent1,Parent2,1.0,KK);
 			
@@ -858,7 +852,7 @@ Individual solve_KenKen(KenKen KK)
 			mutate(mutationRate,&Result.Inds[1],KK);
 			updateFitness(&Result.Inds[1],KK);
 			
-            Num_Mutations+=1;
+          Num_Mutations+=1;
 			if (Result.Inds[1].Fitness > old_Fitness) phi=phi+1.0;
 			
 			appendPopulation(&Next_P,Result.Inds[0]); 
@@ -879,7 +873,7 @@ Individual solve_KenKen(KenKen KK)
 		//Kiểm tra quần thể mới vừa tạo (kiểm tra xem có bị bế tắc từ 100 lần trở lên hay không).
 		if (P.Inds[0].Fitness != P.Inds[1].Fitness) stale=0;
 		else stale+=1;
-		if (stale>=10) //Nếu bị bế tắc, khởi tạo lại quần thể từ ban đầu.
+		if (stale>=1000) //Nếu bị bế tắc, khởi tạo lại quần thể từ ban đầu.
 		{
 			printf("Stale Population. Re-seeding...\n");
 			seedPopulation(&P,Num_Candidates,KK);
@@ -890,21 +884,15 @@ Individual solve_KenKen(KenKen KK)
 			mutationRate=0.06;
 		}			
 	}
+	return P.Inds[0];
 }
 
 int main()
 {
 	srand(time(0));
-	KenKen KK; readKenKen(&KK,"input5x5.txt");
+	KenKen KK; readKenKen(&KK,"input8x8.txt");
 	KenKen Backup;
-	// printKenKen(KK);
-	//solve_KenKen_with_constraints(&KK,&Backup);
-	Population p; 
-	initPopulation(&p); 
-	seedPopulation(&p, 2, KK);
-	p = crossover(p.Inds[0], p.Inds[1], 1, KK);
-	printf(" -- ");
-	print_individual(p.Inds[0]);	
+//	solve_KenKen_with_constraints(&KK,&Backup);
 	Individual KQ=solve_KenKen(KK);
 	print_individual(KQ);	
 	return 0;
