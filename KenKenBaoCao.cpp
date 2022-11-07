@@ -503,7 +503,7 @@ float float_rand(float min, float max)
     return min + scale * (max - min);
 }
 
-void solve_KenKen_with_constraints(KenKen *KK, KenKen *Backup)
+int solve_KenKen_with_constraints(KenKen *KK, KenKen *Backup)
 {
     *Backup = *KK;
     try
@@ -511,6 +511,7 @@ void solve_KenKen_with_constraints(KenKen *KK, KenKen *Backup)
         if (KKBackTracking(KK, Backup))
         {
             printf("\nCAN BE SOLVED WITH CONSTRAINTS ALGORITHM. EXPLORED %d STATES\n", exploredCounter);
+            return 1;
         }
     }
     catch (long long explored)
@@ -546,6 +547,7 @@ void solve_KenKen_with_constraints(KenKen *KK, KenKen *Backup)
     //         count++;
     //     }
     // }
+    return 0;
 }
 
 typedef struct
@@ -1049,20 +1051,26 @@ int main()
     time_t start, end;
     srand(time(0));
     KenKen KK;
-    readKenKen(&KK, "inputs/input9.txt");
+    readKenKen(&KK, "inputs/input2.txt");
     KenKen Backup;
-    solve_KenKen_with_constraints(&KK, &Backup);
+    if (solve_KenKen_with_constraints(&KK, &Backup))
+    {
+        printKenKen(KK);
+    }
+    else
+    {
 
-    start = clock();
+        start = clock();
 
-    printKenKen(Backup);
-    Individual KQ = solve_KenKen(Backup);
-    print_individual(KQ);
-    end = clock();
-    float duration = (float)(end - start) / CLOCKS_PER_SEC;
-    printf("\nTimes Taken: %.4fsec", duration);
-    print_individual(best_indi);
-    printf("\n %.2f", best_indi.Fitness);
+        printKenKen(Backup);
+        Individual KQ = solve_KenKen(Backup);
+        print_individual(KQ);
+        end = clock();
+        float duration = (float)(end - start) / CLOCKS_PER_SEC;
+        printf("\nTimes Taken: %.4fsec", duration);
+        print_individual(best_indi);
+        printf("\n %.2f", best_indi.Fitness);
+    }
 
     return 0;
 }
